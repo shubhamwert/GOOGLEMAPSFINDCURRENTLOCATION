@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="google_api_key" translatable="false" formatted="false">PUT_GOOGLE_API_HERE</string>
+</resources>
