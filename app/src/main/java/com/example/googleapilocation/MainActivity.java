@@ -161,6 +161,6 @@ mMap.clear();
         mMap.addMarker(new MarkerOptions()
                 .position(latLng)
                 .title("Marker"));
-        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,16f));
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,16f));
     }
 }
