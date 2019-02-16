@@ -17,6 +17,7 @@ import android.widget.Toast;
 
 import com.google.android.gms.internal.location.zzas;
 import com.google.android.gms.location.FusedLocationProviderClient;
+import com.google.android.gms.maps.CameraUpdate;
 import com.google.android.gms.maps.CameraUpdateFactory;
 import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.MapFragment;
@@ -27,14 +28,13 @@ import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback{
+//TODo ERROR HANDLING
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
     private static final String TAG = "MAp";
     GoogleMap mMap;
     boolean mLocationPermissionGranted;
     FusedLocationProviderClient mFusedLocationProviderClient;
     Location mLastKnownLocation;
-
 
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION=1;
     @Override
@@ -44,6 +44,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
         SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
         mapFragment.getMapAsync(this);
+
         mFusedLocationProviderClient=new FusedLocationProviderClient(this);
 
 
@@ -83,15 +84,25 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
             mMap=googleMap;
-//        mMap.addMarker(new MarkerOptions()
-//                .position(new LatLng(0, 0))
-//                .title("Marker"));
-//mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(new LatLng(-33.852, 151.211),5f));
+            mMap.setOnMapClickListener(this);
+        mMap.addMarker(new MarkerOptions()
+                .position(new LatLng(0, 0))
+                .title("Marker"));
+
         updateLocationUI();
 
 
         getDeviceLocation();
         Toast.makeText(this,mMap.getCameraPosition().toString(),Toast.LENGTH_SHORT).show();
+        mMap.setOnMyLocationClickListener(new GoogleMap.OnMyLocationClickListener() {
+            @Override
+            public void onMyLocationClick(@NonNull Location location) {
+                mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())).title("marker"));
+                CameraUpdate cameraUpdate=CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(),location.getLongitude()),14f);
+                mMap.animateCamera(cameraUpdate);
+            }
+        });
+
     }
     private void updateLocationUI() {
         if (mMap == null) {
@@ -141,5 +152,15 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void show(View view) {
         Toast.makeText(this,mMap.getCameraPosition().toString(),Toast.LENGTH_SHORT).show();
+    }
+
+    @Override
+    public void onMapClick(LatLng latLng) {//TODO find mehtod to remove all markers
+mMap.clear();
+        Toast.makeText(this,"latitude=="+latLng.latitude+"logitude=="+latLng.longitude,Toast.LENGTH_SHORT).show();
+        mMap.addMarker(new MarkerOptions()
+                .position(latLng)
+                .title("Marker"));
+        mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(latLng,16f));
     }
 }
