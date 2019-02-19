@@ -39,7 +39,12 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.ParseException;
 import java.util.Calendar;
+import java.util.Date;
 
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener,GoogleMap.OnMarkerDragListener {
     private static final String TAG = "MAp";
@@ -71,10 +76,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
        btn_dark.setOnClickListener(new View.OnClickListener() {
            @Override
-           public void onClick(View v) {
-          String  unixDate= getDateDialog();
-          Toast.makeText(getApplicationContext(),unixDate,Toast.LENGTH_SHORT).show();
-          getDarkSky(mMap.getCameraPosition().target.latitude,mMap.getCameraPosition().target.longitude,unixDate);
+           public void onClick(View v){
+             getDateDialog();
+
+               double lat = mMap.getCameraPosition().target.latitude;
+               double lng = mMap.getCameraPosition().target.longitude;
+
+
+             if(unixDate!=null)
+             getDarkSky( lat,lng,unixDate);
+             else
+                 Toast.makeText(getApplicationContext(),"Dont give me null DATE",Toast.LENGTH_SHORT).show();
 
            }
        });
@@ -83,7 +95,8 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
 
 
-    private String getDateDialog(){
+
+    private void getDateDialog(){
 
 
         DatePickerDialog datePick=new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
@@ -91,14 +104,17 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
             public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
             Calendar calendar=Calendar.getInstance();
             calendar.set(year,month,dayOfMonth);
-            long unix_date=calendar.getTimeInMillis();
-            unixDate =Long.toString(unix_date);
+                long epoch=calendar.getTimeInMillis()/ 1000;
+                unixDate =Long.toString(epoch);
+
+
             }
         },
                 2019,1,15 );
         datePick.show();
 
-        return unixDate;
+
+
     }
 
 
@@ -261,7 +277,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
         final TextView tv_detail = findViewById(R.id.tv_detail);
-        String url = "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lng+"&appid=ede6b3177bb03b3d8d1f81f476a76409";
+        String url = "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lng+"&appid=API_KEY_OPEN_WEATHER";
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.GET, url, null,
@@ -286,7 +302,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getApplicationContext(), "Voll ey WEATHER Error", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "Open Weather Error", Toast.LENGTH_SHORT).show();
 
                     }
                 });
@@ -297,7 +313,10 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
     private void getDarkSky(double lat,double lng,String unixDate) {
         RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
         final TextView tv_dark = findViewById(R.id.tv_dark);
-        String url = "https://api.darksky.net/forecast/15ab6adb13d80586c4d9d43561534a9b/"+lat+","+lng+","+unixDate;
+        String url = "https://api.darksky.net/forecast/API_KEY_DARK_SKY/"+lat+","+lng+","+unixDate;
+
+        Log.v("DARK SKY",url);
+
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.GET, url, null,
@@ -323,11 +342,11 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getApplicationContext(), "Voll ey WEATHER Error", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "DARK sky Error", Toast.LENGTH_SHORT).show();
 
                     }
                 });
-        requestQueue.add(jsonObjectRequest);
+       requestQueue.add(jsonObjectRequest);
     }
 
 }
