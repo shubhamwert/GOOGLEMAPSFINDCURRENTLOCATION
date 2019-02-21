@@ -1,5 +1,6 @@
 package com.example.googleapilocation;
 
+import android.app.DatePickerDialog;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -10,6 +11,8 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.DatePicker;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -36,13 +39,21 @@ import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONObject;
 
-//TODo ERROR HANDLING
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+
 public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener,GoogleMap.OnMarkerDragListener {
     private static final String TAG = "MAp";
     GoogleMap mMap;
     boolean mLocationPermissionGranted;
     FusedLocationProviderClient mFusedLocationProviderClient;
     Location mLastKnownLocation;
+    String unixDate;
+
 
 
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION=1;
@@ -60,10 +71,54 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 .unsubscribeWhenNotificationsAreDisabled(true)
                 .init();
 
-        mFusedLocationProviderClient=new FusedLocationProviderClient(this);
+        mFusedLocationProviderClient = new FusedLocationProviderClient(this);
+       Button btn_dark=findViewById(R.id.btn_dark);
+
+       btn_dark.setOnClickListener(new View.OnClickListener() {
+           @Override
+           public void onClick(View v){
+             getDateDialog();
+
+               double lat = mMap.getCameraPosition().target.latitude;
+               double lng = mMap.getCameraPosition().target.longitude;
+
+
+             if(unixDate!=null)
+             getDarkSky( lat,lng,unixDate);
+             else
+                 Toast.makeText(getApplicationContext(),"Dont give me null DATE",Toast.LENGTH_SHORT).show();
+
+           }
+       });
+
+    }
+
+
+
+
+    private void getDateDialog(){
+
+
+        DatePickerDialog datePick=new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+            Calendar calendar=Calendar.getInstance();
+            calendar.set(year,month,dayOfMonth);
+                long epoch=calendar.getTimeInMillis()/ 1000;
+                unixDate =Long.toString(epoch);
+
+
+            }
+        },
+                2019,1,15 );
+        datePick.show();
+
 
 
     }
+
+
+
     private void getLocationPermission() {
         /*
          * Request location permission, so that we can get the location of the
@@ -222,7 +277,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
         RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
         final TextView tv_detail = findViewById(R.id.tv_detail);
-        String url = "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lng+"&appid=??????????????????????????????????";
+        String url = "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lng+"&appid=API_KEY_OPEN_WEATHER";
 
         JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
                 (Request.Method.GET, url, null,
@@ -247,7 +302,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
                     @Override
                     public void onErrorResponse(VolleyError error) {
-                        Toast.makeText(getApplicationContext(), "Voll ey WEATHER Error", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getApplicationContext(), "Open Weather Error", Toast.LENGTH_SHORT).show();
 
                     }
                 });
@@ -255,5 +310,43 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     }
 
+    private void getDarkSky(double lat,double lng,String unixDate) {
+        RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
+        final TextView tv_dark = findViewById(R.id.tv_dark);
+        String url = "https://api.darksky.net/forecast/API_KEY_DARK_SKY/"+lat+","+lng+","+unixDate;
+
+        Log.v("DARK SKY",url);
+
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null,
+                        new Response.Listener<JSONObject>() {
+
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject jsonObject = response.getJSONObject("daily");
+                                    JSONArray jsonArray=jsonObject.getJSONArray("data");
+                                    JSONObject jsonObject1=jsonArray.getJSONObject(0);
+
+
+                                    tv_dark.setText("precipIntensity "+jsonObject1.getString("precipIntensity")+"\nprecipType "+jsonObject1.getString("precipType"));
+
+                                } catch (JSONException e) {
+
+                                    e.printStackTrace();
+
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getApplicationContext(), "DARK sky Error", Toast.LENGTH_SHORT).show();
+
+                    }
+                });
+       requestQueue.add(jsonObjectRequest);
+    }
 
 }

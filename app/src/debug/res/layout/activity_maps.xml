@@ -25,5 +25,22 @@
         android:layout_width="300dp"
         android:layout_height="55dp"
         android:id="@+id/tv_detail"
-        android:layout_below="@+id/btn_show"/>
+        android:layout_toRightOf="@+id/btn_show"/>
+
+
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:id="@+id/btn_dark"
+        android:layout_below="@+id/map"
+        android:text="Dark"
+        android:layout_marginTop="10dp"/>
+    <TextView
+        android:hint="Hello Dark"
+        android:layout_width="300dp"
+        android:layout_height="55dp"
+        android:id="@+id/tv_dark"
+        android:layout_toRightOf="@+id/btn_dark"
+        android:layout_below="@+id/map"/>
 </RelativeLayout>
