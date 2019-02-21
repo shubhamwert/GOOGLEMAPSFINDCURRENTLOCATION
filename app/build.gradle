@@ -1,9 +1,28 @@
+buildscript {
+    repositories {
+        maven { url 'https://plugins.gradle.org/m2/'}
+    }
+    dependencies {
+        classpath 'gradle.plugin.com.onesignal:onesignal-gradle-plugin:[0.11.0, 0.99.99]'
+    }
+}
+apply plugin: 'com.onesignal.androidsdk.onesignal-gradle-plugin'
+
+repositories {
+    maven { url 'https://maven.google.com' }
+}
+
 apply plugin: 'com.android.application'
 
 android {
     compileSdkVersion 28
     defaultConfig {
         applicationId "com.example.googleapilocation"
+        manifestPlaceholders = [
+                onesignal_app_id:'021b1be0-31a8-4688-b9b5-70cda1aaad9d',
+                // Project number pulled from dashboard, local value is ignored.
+                onesignal_google_project_number: 'REMOTE'
+        ]
         minSdkVersion 23
         targetSdkVersion 28
         versionCode 1
@@ -31,4 +50,7 @@ dependencies {
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
     androidTestImplementation 'com.android.support.test:runner:1.0.2'
     androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.2'
+    implementation 'com.android.volley:volley:1.1.1'
+    implementation 'com.onesignal:OneSignal:3.10.6'
+
 }

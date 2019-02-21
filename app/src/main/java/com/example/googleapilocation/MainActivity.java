@@ -1,5 +1,7 @@
 package com.example.googleapilocation;
 
+
+import android.app.DatePickerDialog;
 import android.content.pm.PackageManager;
 import android.location.Location;
 import android.os.Bundle;
@@ -10,7 +12,17 @@ import android.support.v4.app.FragmentActivity;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.view.View;
+import android.widget.Button;
+import android.widget.DatePicker;
+import android.widget.TextView;
 import android.widget.Toast;
+
+import com.android.volley.Request;
+import com.android.volley.RequestQueue;
+import com.android.volley.Response;
+import com.android.volley.VolleyError;
+import com.android.volley.toolbox.JsonObjectRequest;
+import com.android.volley.toolbox.Volley;
 
 import com.google.android.gms.location.FusedLocationProviderClient;
 import com.google.android.gms.maps.CameraUpdate;
@@ -19,30 +31,96 @@ import com.google.android.gms.maps.GoogleMap;
 import com.google.android.gms.maps.OnMapReadyCallback;
 import com.google.android.gms.maps.SupportMapFragment;
 import com.google.android.gms.maps.model.LatLng;
+import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
 import com.google.android.gms.tasks.OnCompleteListener;
 import com.google.android.gms.tasks.Task;
-//TODo ERROR HANDLING
-public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener {
+import com.onesignal.OneSignal;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.text.DecimalFormat;
+import java.text.ParseException;
+import java.util.Calendar;
+import java.util.Date;
+
+public class MainActivity extends FragmentActivity implements OnMapReadyCallback, GoogleMap.OnMapClickListener,GoogleMap.OnMarkerDragListener {
     private static final String TAG = "MAp";
     GoogleMap mMap;
     boolean mLocationPermissionGranted;
     FusedLocationProviderClient mFusedLocationProviderClient;
     Location mLastKnownLocation;
+    String unixDate;
+
+
 
     private static final int PERMISSIONS_REQUEST_ACCESS_FINE_LOCATION=1;
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_maps);
-        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
 
+        SupportMapFragment mapFragment = (SupportMapFragment) getSupportFragmentManager().findFragmentById(R.id.map);
         mapFragment.getMapAsync(this);
 
-        mFusedLocationProviderClient=new FusedLocationProviderClient(this);
+        // OneSignal Initialization
+        OneSignal.startInit(this)
+                .inFocusDisplaying(OneSignal.OSInFocusDisplayOption.Notification)
+                .unsubscribeWhenNotificationsAreDisabled(true)
+                .init();
+
+        mFusedLocationProviderClient = new FusedLocationProviderClient(this);
+       Button btn_dark=findViewById(R.id.btn_dark);
+
+       btn_dark.setOnClickListener(new View.OnClickListener() {
+           @Override
+           public void onClick(View v){
+             getDateDialog();
+
+               double lat = mMap.getCameraPosition().target.latitude;
+               double lng = mMap.getCameraPosition().target.longitude;
+
+
+             if(unixDate!=null)
+             getDarkSky( lat,lng,unixDate);
+             else
+                 Toast.makeText(getApplicationContext(),"Dont give me null DATE",Toast.LENGTH_SHORT).show();
+
+           }
+       });
+
+    }
+
+
+
+
+    private void getDateDialog(){
+
+
+        DatePickerDialog datePick=new DatePickerDialog(MainActivity.this, new DatePickerDialog.OnDateSetListener() {
+            @Override
+            public void onDateSet(DatePicker view, int year, int month, int dayOfMonth) {
+            Calendar calendar=Calendar.getInstance();
+            calendar.set(year,month,dayOfMonth);
+                long epoch=calendar.getTimeInMillis()/ 1000;
+                unixDate =Long.toString(epoch);
+
+
+            }
+        },
+                2019,1,15 );
+        datePick.show();
+
 
 
     }
+
+
+
     private void getLocationPermission() {
         /*
          * Request location permission, so that we can get the location of the
@@ -77,11 +155,13 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onMapReady(GoogleMap googleMap) {
-            mMap=googleMap;
-            mMap.setOnMapClickListener(this);
+        mMap=googleMap;
+        mMap.setOnMapClickListener(this);
+
         mMap.addMarker(new MarkerOptions()
                 .position(new LatLng(0, 0))
                 .title("Marker"));
+        mMap.setOnMarkerDragListener(this);
 
         updateLocationUI();
 
@@ -94,6 +174,24 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
                 mMap.addMarker(new MarkerOptions().position(new LatLng(location.getLatitude(),location.getLongitude())).title("marker"));
                 CameraUpdate cameraUpdate=CameraUpdateFactory.newLatLngZoom(new LatLng(location.getLatitude(),location.getLongitude()),14f);
                 mMap.animateCamera(cameraUpdate);
+            }
+        });
+        mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
+            @Override
+            public void onMarkerDragStart(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDrag(Marker marker) {
+
+            }
+
+            @Override
+            public void onMarkerDragEnd(Marker marker) {
+                mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(),16f));
+
+
             }
         });
 
@@ -146,6 +244,7 @@ public class MainActivity extends FragmentActivity implements OnMapReadyCallback
 
     public void show(View view) {
         Toast.makeText(this,mMap.getCameraPosition().toString(),Toast.LENGTH_SHORT).show();
+        getWeatherData(mMap.getCameraPosition().target.latitude,mMap.getCameraPosition().target.longitude);
     }
 
     @Override
@@ -154,7 +253,102 @@ mMap.clear();
         Toast.makeText(this,"latitude=="+latLng.latitude+"logitude=="+latLng.longitude,Toast.LENGTH_SHORT).show();
         mMap.addMarker(new MarkerOptions()
                 .position(latLng)
-                .title("Marker"));
+                .title("latitude=="+latLng.latitude+"logitude=="+latLng.longitude)
+                .draggable(true));
+
+
         mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(latLng,16f));
     }
+
+    @Override
+    public void onMarkerDragStart(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDrag(Marker marker) {
+
+    }
+
+    @Override
+    public void onMarkerDragEnd(Marker marker) {
+        mMap.animateCamera(CameraUpdateFactory.newLatLngZoom(marker.getPosition(),16f));
+    }
+
+    private void getWeatherData(double lat,double lng) {
+
+        RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
+        final TextView tv_detail = findViewById(R.id.tv_detail);
+        String url = "https://api.openweathermap.org/data/2.5/weather?lat="+lat+"&lon="+lng+"&appid=API_KEY_OPEN_WEATHER";
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null,
+                        new Response.Listener<JSONObject>() {
+
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONArray jsonArray = response.getJSONArray("weather");
+                                    JSONObject jsonObject = jsonArray.getJSONObject(0);
+
+
+                                    tv_detail.setText(jsonObject.getString("description"));
+
+                                } catch (JSONException e) {
+
+                                    e.printStackTrace();
+
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getApplicationContext(), "Open Weather Error", Toast.LENGTH_SHORT).show();
+
+                    }
+                });
+        requestQueue.add(jsonObjectRequest);
+
+    }
+
+    private void getDarkSky(double lat,double lng,String unixDate) {
+        RequestQueue requestQueue = Volley.newRequestQueue(MainActivity.this);
+        final TextView tv_dark = findViewById(R.id.tv_dark);
+        String url = "https://api.darksky.net/forecast/API_KEY_DARK_SKY/"+lat+","+lng+","+unixDate;
+
+        Log.v("DARK SKY",url);
+
+
+        JsonObjectRequest jsonObjectRequest = new JsonObjectRequest
+                (Request.Method.GET, url, null,
+                        new Response.Listener<JSONObject>() {
+
+                            @Override
+                            public void onResponse(JSONObject response) {
+                                try {
+                                    JSONObject jsonObject = response.getJSONObject("daily");
+                                    JSONArray jsonArray=jsonObject.getJSONArray("data");
+                                    JSONObject jsonObject1=jsonArray.getJSONObject(0);
+
+
+                                    tv_dark.setText("precipIntensity "+jsonObject1.getString("precipIntensity")+"\nprecipType "+jsonObject1.getString("precipType"));
+
+                                } catch (JSONException e) {
+
+                                    e.printStackTrace();
+
+                                }
+                            }
+                        }, new Response.ErrorListener() {
+
+                    @Override
+                    public void onErrorResponse(VolleyError error) {
+                        Toast.makeText(getApplicationContext(), "DARK sky Error", Toast.LENGTH_SHORT).show();
+
+                    }
+                });
+       requestQueue.add(jsonObjectRequest);
+    }
+
 }
